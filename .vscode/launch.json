@@ -13,6 +13,10 @@
             "runToEntryPoint": "main",
             "servertype": "openocd",
             "device": "STM32H723ZG",
+            "liveWatch": {
+                "enabled": true, 
+                "samplesPerSecond": 200
+            },
             "configFiles": [
                 "interface/stlink-v2.cfg",
                 "target/STM32H7x.cfg"
