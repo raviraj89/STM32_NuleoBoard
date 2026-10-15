@@ -7,7 +7,7 @@
         {
             "name": "Cortex Debug",
             "cwd": "${workspaceFolder}",
-            "executable": "./build/stm32H7_Board.elf",
+            "executable": "./build/Debug/stm32H7_Board.elf",
             "request": "launch",
             "type": "cortex-debug",
             "runToEntryPoint": "main",
@@ -18,5 +18,7 @@
                 "target/STM32H7x.cfg"
             ]
         }
+
+
     ]
 }
