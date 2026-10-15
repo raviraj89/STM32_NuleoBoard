@@ -4,7 +4,6 @@ enable_language(C ASM)
 # STM32CubeMX generated symbols (macros)
 set(MX_Defines_Syms 
 	USE_PWR_LDO_SUPPLY 
-	USE_NUCLEO_144 
 	USE_HAL_DRIVER 
 	STM32H723xx
     $<$<CONFIG:Debug>:DEBUG>
