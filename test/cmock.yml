@@ -1,0 +1,6 @@
+:cmock:
+  :mock_prefix: mock_
+  :enforce_strict_ordering: true
+  :plugins:
+    - :ignore
+    - :callback
