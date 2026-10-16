@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to the same branch/PR cancels the older, still-running run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  ARM_TOOLCHAIN: arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi
+
+jobs:
+  firmware:
+    name: Firmware build (${{ matrix.preset }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Arm GNU toolchain
+        id: cache-arm
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/${{ env.ARM_TOOLCHAIN }}
+          key: ${{ env.ARM_TOOLCHAIN }}
+
+      - name: Download Arm GNU toolchain
+        if: steps.cache-arm.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL "https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/${ARM_TOOLCHAIN}.tar.xz" \
+            | tar -xJ -C "$RUNNER_TEMP"
+
+      - name: Add toolchain to PATH, install Ninja
+        run: |
+          echo "$RUNNER_TEMP/$ARM_TOOLCHAIN/bin" >> "$GITHUB_PATH"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: Size report
+        run: |
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          arm-none-eabi-size build/${{ matrix.preset }}/stm32H7_Board.elf | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.preset }}
+          path: |
+            build/${{ matrix.preset }}/stm32H7_Board.elf
+            build/${{ matrix.preset }}/stm32H7_Board.map
+          if-no-files-found: error
+
+  host-tests:
+    name: Host tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install host tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build ruby gcovr
+
+      - name: Configure
+        run: cmake -S test -B build/test -G Ninja -DENABLE_COVERAGE=ON
+
+      - name: Build
+        run: cmake --build build/test
+
+      - name: Run tests
+        run: ctest --test-dir build/test --output-on-failure --output-junit junit.xml
+
+      - name: Coverage summary
+        run: |
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          gcovr --root . --filter 'App/' build/test | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: host-test-results
+          path: build/test/junit.xml
