@@ -1,0 +1,6 @@
+mach create "nucleo"
+machine LoadPlatformDescription @platforms/boards/nucleo_h753zi.repl
+sysbus LoadELF @build/Debug/stm32H7_Board.elf
+showAnalyzer sysbus.usart3
+machine StartGdbServer 3333
+start

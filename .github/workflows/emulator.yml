@@ -1,0 +1,62 @@
+name: Emulator
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ARM_TOOLCHAIN: arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi
+  RENODE_VERSION: 1.17.0
+
+jobs:
+  renode:
+    name: Emulator tests (Renode)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Arm GNU toolchain and Ninja
+        run: |
+          curl -fsSL "https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/${ARM_TOOLCHAIN}.tar.xz" \
+            | tar -xJ -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/$ARM_TOOLCHAIN/bin" >> "$GITHUB_PATH"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build
+
+      - name: Install Renode
+        run: |
+          curl -fsSL "https://github.com/renode/renode/releases/download/v${RENODE_VERSION}/renode-${RENODE_VERSION}.linux-portable.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP"
+          RENODE_DIR="$RUNNER_TEMP/renode_${RENODE_VERSION}-portable"
+          python -m pip install -r "$RENODE_DIR/tests/requirements.txt"
+          echo "$RENODE_DIR" >> "$GITHUB_PATH"
+
+      - name: Build firmware (Debug)
+        run: |
+          cmake --preset Debug
+          cmake --build --preset Debug
+
+      - name: Run Renode tests
+        run: renode-test test/emulator/blinky.robot
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: renode-results
+          path: |
+            robot_output.xml
+            log.html
+            report.html
+            logs/
+            snapshots/
+          if-no-files-found: ignore
