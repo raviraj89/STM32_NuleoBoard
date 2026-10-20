@@ -1,3 +1,10 @@
 build
 mx.scratch
 !.settings
+
+# Renode / Robot Framework test output
+robot_output.xml
+log.html
+report.html
+logs/
+snapshots/
