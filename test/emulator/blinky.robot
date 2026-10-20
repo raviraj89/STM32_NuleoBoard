@@ -1,5 +1,8 @@
 *** Variables ***
 ${ELF}              ${CURDIR}/../../build/Debug/stm32H7_Board.elf
+# Renode has no NUCLEO-H723ZG model; the H753ZI board shares the LED pins
+# (PB0, PE1, PB14) and USART3, so it is close enough for these tests.
+# The RCC warnings about PLL1GRE/PLL1FRACEN in the log are expected.
 ${PLATFORM}         @platforms/boards/nucleo_h753zi.repl
 
 *** Keywords ***
